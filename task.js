@@ -1,8 +1,6 @@
-
 const express = require('express');
 const app = express();
 const port = 4000;
-
 
 const mysql = require('mysql2');
 const connection = mysql.createConnection({
@@ -20,60 +18,78 @@ connection.connect((err) => {
   console.log('Connecté à MySQL avec l\'ID', connection.threadId);
 });
 
-
 app.get('/db', (req, res) => {
-  console.log("Access DB Route page");
-  let sql = 'CREATE DATABASE if not exists quizz';
+  let sql = 'CREATE DATABASE IF NOT EXISTS quizz';
   connection.query(sql, (error, result) => {
     if (error) {
-      console.log(error.message);
-      throw error;
+      console.error(error.message);
+      return res.status(500).send('Failed to create database.');
     }
-    console.log(result);
-    res.send('A new database was created!');
+    res.send('Database created!');
   });
 });
-
 
 app.get('/users', (req, res) => {
-  const sql = 'CREATE TABLE IF NOT EXISTS users (user_id INT AUTO_INCREMENT, first_name VARCHAR(40), last_name VARCHAR(40), email VARCHAR(50), PRIMARY KEY(user_id))';
+  const sql = `CREATE TABLE IF NOT EXISTS users (
+    user_id INT AUTO_INCREMENT, 
+    first_name VARCHAR(40), 
+    last_name VARCHAR(40), 
+    email VARCHAR(50), 
+    PRIMARY KEY(user_id)
+  )`;
   connection.query(sql, (err, result) => {
     if (err) {
-      throw err;
+      console.error('Error creating table:', err);
+      return res.status(500).send('Failed to create table.');
     }
-    console.log(result);
-    res.send('Users table is created!');
+    res.send('Users table created!');
   });
 });
-
 
 app.get('/adduser', (req, res) => {
-  let firstName = 'Robin';
-  let lastName = 'Gari';
-  let email = 'robingari@yahoo.ca';
   const sql = 'INSERT INTO users (first_name, last_name, email) VALUES (?, ?, ?)';
+  const firstName = 'Robin';
+  const lastName = 'Gari';
+  const email = 'robingari@yahoo.ca';
+
   connection.query(sql, [firstName, lastName, email], (err, result) => {
     if (err) {
-      throw err;
+      console.error('Error inserting user:', err);
+      return res.status(500).send('Failed to add user.');
     }
-    console.log(result);
-    res.send('One user was inserted');
+    res.send('User added!');
   });
 });
 
-
-app.get('/selectall', (req, res) => {
+app.get('/show', (req, res) => {
   const sql = 'SELECT * FROM users';
   connection.query(sql, (err, records) => {
     if (err) {
-      throw err;
+      console.error('Error fetching users:', err);
+      return res.status(500).send('Failed to fetch users.');
     }
-    console.log(records);
-    res.send(records);
+    res.json(records); // Use JSON to return structured data
   });
 });
 
-app.listen(port,()=>{
-  console.log("Server is running on port");
+app.get('/delete/:id', (req, res) => {
+  const sql = 'DELETE FROM users WHERE user_id = ?';
+  const userId = req.params.id;
+
+  connection.query(sql, [userId], (err, result) => {
+    if (err) {
+      console.error('Error deleting record:', err);
+      return res.status(500).send('Failed to delete the record.');
+    }
+
+    if (result.affectedRows === 0) {
+      return res.status(404).send('No user found with the given ID.');
+    }
+
+    res.send('User successfully deleted.');
+  });
 });
 
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});
